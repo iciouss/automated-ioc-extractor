@@ -1,0 +1,2 @@
+distorm3==3.5.2
+pycryptodome==3.21.0

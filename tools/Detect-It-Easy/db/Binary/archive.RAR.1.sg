@@ -1,0 +1,7 @@
+// Detect It Easy: detection rule file
+
+includeScript("rar");
+
+function detect() {
+    detect_RAR(1);
+}
