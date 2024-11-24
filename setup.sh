@@ -42,3 +42,18 @@ curl -fsSL https://get.docker.com | sudo bash
 sudo systemctl disable --now docker.service docker.socket
 dockerd-rootless-setuptool.sh check --force | awk '/########## BEGIN ##########/{flag=1; next} /########## END ##########/{flag=0} flag' | bash
 dockerd-rootless-setuptool.sh install --force
+
+# Build DIE docker image
+docker build tools/Detect-It-Easy/. -t horsicq:diec
+
+# Locate plugins in volatility folder
+# mv tools/modex/modex.py tools/volatility3/volatility3/framework/plugins/windows/modex.py
+mv patched/modex.py tools/volatility3/volatility3/framework/plugins/windows/.
+mv tools/volatility-plugins/*.py tools/volatility3/volatility3/framework/plugins/windows/.
+
+# Install CAPA from latest release
+CAPA_VERSION=$(curl 'https://api.github.com/repos/mandiant/capa/releases/latest' | jq -r .tag_name)
+wget https://github.com/mandiant/capa/releases/download/$CAPA_VERSION/capa-$CAPA_VERSION-linux.zip
+unzip capa-$CAPA_VERSION-linux.zip
+mv capa tools/capa
+rm capa-$CAPA_VERSION-linux.zip

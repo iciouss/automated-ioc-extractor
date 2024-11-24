@@ -1,6 +1,6 @@
-[submodule "tools/volatility"]
-	path = tools/volatility
-	url = https://github.com/volatilityfoundation/volatility
+# [submodule "tools/volatility"]
+# 	path = tools/volatility
+# 	url = https://github.com/volatilityfoundation/volatility
 [submodule "tools/volatility3"]
 	path = tools/volatility3
 	url = https://github.com/volatilityfoundation/volatility3
@@ -13,3 +13,6 @@
 [submodule "tools/Detect-It-Easy"]
 	path = tools/Detect-It-Easy
 	url = https://github.com/horsicq/Detect-It-Easy
+# [submodule "tools/capa"]
+# 	path = tools/capa
+# 	url = https://github.com/mandiant/capa
