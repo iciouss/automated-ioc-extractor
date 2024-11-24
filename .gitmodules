@@ -13,6 +13,3 @@
 [submodule "tools/modex"]
 	path = tools/modex
 	url = https://github.com/reverseame/modex
-[submodule "tools/Detect-It-Easy"]
-	path = tools/Detect-It-Easy
-	url = https://github.com/horsicq/Detect-It-Easy
