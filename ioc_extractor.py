@@ -96,9 +96,15 @@ def rabin2(file_path, output_folder):
     output = run_tool(command, output_file='rabin2_result.txt', output_folder=output_folder)
     return output
 
-def phase1(file_path, args, output_folder):
+def diec(file_path, output_folder):
+    command = f"tools/Detect-It-Easy/docker/diec.sh -e -j {file_path}"
+    output = run_tool(command, output_file='diec_result.txt', output_folder=output_folder)
+    return output
 
-    # Load tools to run from config file
+def phase1(file_path, args, output_folder):
+    print("Starting static analysis (phase1) ...")
+    print("=====================================")
+
     tools_to_run = []
     available_tools = [
         func for func in globals().keys()
@@ -110,6 +116,7 @@ def phase1(file_path, args, output_folder):
             tools_to_run.append(tool_name)
 
     results = {}
+    output_folder = f"{output_folder}/static"
     with ThreadPoolExecutor() as executor:
         futures = {}
         for tool_name in tools_to_run:
@@ -131,7 +138,8 @@ def phase1(file_path, args, output_folder):
                 results[tool_name] = output
             except Exception as e:
                 results[tool_name] = f"Error: {e}"
-    return results
+    print(f"Static analysis completed. Results are available in {output_folder}")
+    # return results
 
 # -------------------------
 # Phase 2: Dynamic Analysis
@@ -148,15 +156,14 @@ class SimpleHTTPRequestHandler(BaseHTTPRequestHandler):
     
         content_length = int(self.headers['Content-Length'])
         file_data = self.rfile.read(content_length)
-        # dump_dir = f"/opt/CAPEv2/storage/analyses/{self.dump_path}/memory"
-        # filename = f"memdump.raw.zst"
+        # Check folder and save file
         os.makedirs(os.path.dirname(self.dump_path), exist_ok=True)
         with open(self.dump_path, 'wb') as f:
             f.write(file_data)
-        # Send response
+        
         self.send_response(200)
         self.end_headers()
-        self.wfile.write(b'File received\n')
+        self.wfile.write(b'File received')
         
         # Stop the server after handling the request
         if self.stop_server_callback:
@@ -183,7 +190,6 @@ def start_server(dump_path, port=8888):
     return thread
 
 def phase2(file_path):
-    print("Phase 2: Dynamic Analysis is not implemented yet.")
     
     poetry_python = subprocess.run("poetry --directory /opt/CAPEv2/ env list --full-path", shell=True, capture_output=True, text=True).stdout.strip()
     command = f"{poetry_python}/bin/python /opt/CAPEv2/utils/submit.py --timeout 60 {file_path}"
