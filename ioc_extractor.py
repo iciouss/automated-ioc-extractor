@@ -175,7 +175,7 @@ def start_server(task_id, port=8888):
 
    # Run the server in a separate thread
     def server_thread():
-        print(f"Server starting on port {port}, saving files to {dump_dir}")
+        print(f"Server starting on port {port}, task ID: {task_id}")
         server.serve_forever()
 
     thread = threading.Thread(target=server_thread, daemon=True)
