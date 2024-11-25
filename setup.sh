@@ -28,19 +28,8 @@ pyenv virtualenv 3.12.7 python3-tools
 
 # Install python 3 dependencies
 pyenv activate python3-tools
-pip install -r requirements-python3.txt
+pip install -r requirements.txt
 source deactivate
-
-# Download yara rules
-wget https://github.com/YARAHQ/yara-forge/releases/latest/download/yara-forge-rules-full.zip
-unzip yara-forge-rules-full.zip
-mv packages/full/*.yar .
-rm -r yara-forge-rules-full.zip packages/
-
-# Clone repositories
-git clone ttps://github.com/volatilityfoundation/volatility3 tools/volatility3
-git clone https://github.com/reverseame/modex tools/modex
-git clone https://github.com/f-block/volatility-plugins tools/volatility-plugins
 
 # Install docker to run in user mode
 curl -fsSL https://get.docker.com | sudo bash
@@ -49,13 +38,25 @@ sudo systemctl disable --now docker.service docker.socket
 dockerd-rootless-setuptool.sh check --force | awk '/########## BEGIN ##########/{flag=1; next} /########## END ##########/{flag=0} flag' | bash
 dockerd-rootless-setuptool.sh install --force
 
+# Download yara rules
+wget https://github.com/YARAHQ/yara-forge/releases/latest/download/yara-forge-rules-full.zip
+unzip yara-forge-rules-full.zip
+mv packages/full/*.yar .
+rm -r yara-forge-rules-full.zip packages/
+
+# Clone repositories
+git clone https://github.com/volatilityfoundation/volatility3 tools/volatility3
+git clone https://github.com/reverseame/modex tools/modex
+git clone https://github.com/f-block/volatility-plugins tools/volatility-plugins
+git clone https://github.com/horsicq/Detect-It-Easy tools/Detect-It-Easy
+
 # Build DIE docker image
 docker build tools/Detect-It-Easy/. -t horsicq:diec
 
 # Locate plugins in volatility folder
-# mv tools/modex/modex.py tools/volatility3/volatility3/framework/plugins/windows/modex.py
-mv patched/modex.py tools/volatility3/volatility3/framework/plugins/windows/.
-mv tools/volatility-plugins/*.py tools/volatility3/volatility3/framework/plugins/windows/.
+# cp tools/modex/modex.py tools/volatility3/volatility3/framework/plugins/windows/modex.py
+cp patched/modex.py tools/volatility3/volatility3/framework/plugins/windows/.
+cp tools/volatility-plugins/*.py tools/volatility3/volatility3/framework/plugins/windows/.
 
 # Install CAPA from latest release
 CAPA_VERSION=$(curl 'https://api.github.com/repos/mandiant/capa/releases/latest' | jq -r .tag_name)

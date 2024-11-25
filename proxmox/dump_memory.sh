@@ -1,6 +1,8 @@
 #!/bin/bash
 VM_ID=$1
 LOG=/tmp/memdump.log
+$HOST_IP=192.168.0.109
+$PORT=8888
 
 function start_dump_memory {
     while true; do
@@ -8,13 +10,14 @@ function start_dump_memory {
         sleep 30
         date >> "$LOG"
         echo "Starting memory dump..." >> "$LOG"
-        dump_memory &
+        dump_memory # add & to make it periodically
     done
 }
 
 function dump_memory {
     DATE=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
-    echo '{ "execute": "qmp_capabilities" } {"execute": "dump-guest-memory","arguments": { "paging": false, "protocol": "file:/tmp/'$DATE'-memdump.raw", "detach": true}}' | socat - UNIX-CONNECT:/var/run/qemu-server/$VM_ID.qmp >> "$LOG"
+    DUMP_FILE="memdump_$DATE.raw"
+    echo '{ "execute": "qmp_capabilities" } {"execute": "dump-guest-memory","arguments": { "paging": false, "protocol": "file:/tmp/'$DUMP_FILE'", "detach": true}}' | socat - UNIX-CONNECT:/var/run/qemu-server/$VM_ID.qmp >> "$LOG"
     
     while true; do 
         status=$(echo '{ "execute": "qmp_capabilities" } { "execute": "query-dump" }' | socat - UNIX-CONNECT:/var/run/qemu-server/$VM_ID.qmp | tail -n +3 | jq .return.status | sed 's/"//g')
@@ -27,9 +30,11 @@ function dump_memory {
     done
 
     echo "Starting compression" >> "$LOG"
-    zstd -10 -T4 --rsyncable /tmp/$DATE-memdump.raw -o /tmp/$DATE-memdump.raw.zst >> "$LOG"
-    echo "Deleting file" >> "$LOG"
-    rm -f /tmp/$DATE-memdump.raw
+    zstd -8 -T4 /tmp/$DUMP_FILE -o /tmp/$DUMP_FILE.zst >> "$LOG"
+    curl -X POST -H "Content-Type: application/octet-stream" --data-binary "@/tmp/$DUMP_FILE" http://$HOST_IP:$PORT/
+    echo "Deleting files" >> "$LOG"
+    rm -f /tmp/$DUMP_FILE
+    rm -f /tmp/$DUMP_FILE.zst
 }
 
 # Start the memory dump process

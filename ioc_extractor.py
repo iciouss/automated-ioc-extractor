@@ -9,6 +9,8 @@ import json
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import configparser
 import time
+from http.server import BaseHTTPRequestHandler, HTTPServer
+import threading
 
 config = configparser.ConfigParser()
 config.read('tools.ini')
@@ -134,15 +136,51 @@ def phase1(file_path, args, output_folder):
 # -------------------------
 # Phase 2: Dynamic Analysis
 # -------------------------
-# def run_cape(plugin, memdump_path, pid=None, extra_args=None):
-#     cmd = ["./vol.py", "-f", memdump_path, plugin]
-#     if pid:
-#         cmd += ["--pid", str(pid)]
-#     if extra_args:
-#         cmd += extra_args  # Only add if not None
-#     print(f"Executing command: {' '.join(cmd)}")  # Debugging info
-#     result = subprocess.run(cmd, capture_output=True, text=True)
-#     return result.stdout
+class SimpleHTTPRequestHandler(BaseHTTPRequestHandler):
+    task_id = None 
+
+    def do_POST(self):
+        if not self.task_id:
+            self.send_response(500)
+            self.end_headers()
+            self.wfile.write(b'Server not properly initialized.')
+            return
+    
+        content_length = int(self.headers['Content-Length'])
+        file_data = self.rfile.read(content_length)
+        dump_dir = f"/opt/CAPEv2/storage/analyses/{self.task_id}/memory"
+        filename = f"{dump_dir}/memdump_{int(time.time())}.raw.zst"
+        os.makedirs(dump_dir, exist_ok=True)
+        with open(os.path.join(self.task_id, filename), 'wb') as f:
+            f.write(file_data)
+        # Send response
+        self.send_response(200)
+        self.end_headers()
+        self.wfile.write(b'File received')
+        
+        # Stop the server after handling the request
+        if self.stop_server_callback:
+            print("Stopping server after receiving the file...")
+            self.stop_server_callback()
+
+def start_server(task_id, port=8888):
+    SimpleHTTPRequestHandler.task_id = task_id
+    server = HTTPServer(('0.0.0.0', port), SimpleHTTPRequestHandler)
+    
+    # Define a callback to stop the server
+    def stop_server():
+        server.shutdown()
+    
+    SimpleHTTPRequestHandler.stop_server_callback = stop_server
+
+   # Run the server in a separate thread
+    def server_thread():
+        print(f"Server starting on port {port}, saving files to {dump_dir}")
+        server.serve_forever()
+
+    thread = threading.Thread(target=server_thread, daemon=True)
+    thread.start()
+    return thread
 
 def phase2(file_path):
     print("Phase 2: Dynamic Analysis is not implemented yet.")
@@ -152,8 +190,10 @@ def phase2(file_path):
     result = subprocess.run(command, shell=True, capture_output=True, text=True)
     task_id = int(re.search(r'ID (\d+)', result.stdout).group(1))
     report_path = f"/opt/CAPEv2/storage/analyses/{task_id}/reports/report.json"
+    # Start HTTP server to receive the dump file for phase 3
+    start_server(task_id)
     start_time = time.time()
-    timeout = 120
+    timeout = 200
     interval = 5
     while not os.path.exists(report_path):
         if time.time() - start_time > timeout:
@@ -167,7 +207,7 @@ def phase2(file_path):
     try:
         behavior = data['behavior']
         print("Behavior object extracted successfully.")
-        # return behavior
+
     except KeyError:
         raise KeyError("'behavior' key not found in the JSON file.")
     
