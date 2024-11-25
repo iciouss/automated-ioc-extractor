@@ -149,9 +149,9 @@ class SimpleHTTPRequestHandler(BaseHTTPRequestHandler):
         content_length = int(self.headers['Content-Length'])
         file_data = self.rfile.read(content_length)
         dump_dir = f"/opt/CAPEv2/storage/analyses/{self.task_id}/memory"
-        filename = f"{dump_dir}/memdump_{int(time.time())}.raw.zst"
+        filename = f"memdump_{int(time.time())}.raw.zst"
         os.makedirs(dump_dir, exist_ok=True)
-        with open(os.path.join(self.task_id, filename), 'wb') as f:
+        with open(os.path.join(dump_dir, filename), 'wb') as f:
             f.write(file_data)
         # Send response
         self.send_response(200)

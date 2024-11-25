@@ -1,17 +1,17 @@
 #!/bin/bash
 VM_ID=$1
 LOG=/tmp/memdump.log
-$HOST_IP=192.168.0.109
-$PORT=8888
+HOST_IP=192.168.0.109
+PORT=8888
 
 function start_dump_memory {
-    while true; do
-        echo "Waiting for 30 seconds..." >> "$LOG"
-        sleep 30
-        date >> "$LOG"
-        echo "Starting memory dump..." >> "$LOG"
-        dump_memory # add & to make it periodically
-    done
+    # while true; do
+    echo "Waiting for 30 seconds..." >> "$LOG"
+    sleep 30
+    date >> "$LOG"
+    echo "Starting memory dump..." >> "$LOG"
+    dump_memory & 
+    # done
 }
 
 function dump_memory {
@@ -31,7 +31,7 @@ function dump_memory {
 
     echo "Starting compression" >> "$LOG"
     zstd -8 -T4 /tmp/$DUMP_FILE -o /tmp/$DUMP_FILE.zst >> "$LOG"
-    curl -X POST -H "Content-Type: application/octet-stream" --data-binary "@/tmp/$DUMP_FILE" http://$HOST_IP:$PORT/
+    curl -X POST -H "Content-Type: application/octet-stream" --data-binary "@/tmp/$DUMP_FILE.zst" http://$HOST_IP:$PORT/ >> "$LOG"
     echo "Deleting files" >> "$LOG"
     rm -f /tmp/$DUMP_FILE
     rm -f /tmp/$DUMP_FILE.zst
