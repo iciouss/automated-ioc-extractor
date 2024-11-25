@@ -139,7 +139,10 @@ def phase1(file_path, args, output_folder):
                 results[tool_name] = output
             except Exception as e:
                 results[tool_name] = f"Error: {e}"
+    
+    print("=====================================")
     print(f"Static analysis completed. Results are available in {output_folder}")
+    print("=====================================")
     # return results
 
 # -------------------------
@@ -190,45 +193,56 @@ def start_server(dump_path, port=8888):
     thread.start()
     return thread
 
-def phase2(file_path):
-    
+def phase2(file_path, output_folder):
+    print("Starting dynamic analysis (phase2) ...")
+    print("======================================")
+
+    # Get poetry executable for running CAPE
     poetry_python = subprocess.run("poetry --directory /opt/CAPEv2/ env list --full-path", shell=True, capture_output=True, text=True).stdout.strip()
+    
+    # Run CAPE
     command = f"{poetry_python}/bin/python /opt/CAPEv2/utils/submit.py --timeout 60 {file_path}"
     result = subprocess.run(command, shell=True, capture_output=True, text=True)
     task_id = int(re.search(r'ID (\d+)', result.stdout).group(1))
     report_path = f"/opt/CAPEv2/storage/analyses/{task_id}/reports/report.json"
     dump_path =  f"/opt/CAPEv2/storage/analyses/{task_id}/memory/memdump.raw.zst"
+
     # Start HTTP server to receive the dump file for phase 3
     server_thread = start_server(dump_path)
+
     start_time = time.time()
     timeout = 200
     interval = 5
+    # Wait for report to be created
     while not os.path.exists(report_path):
         if time.time() - start_time > timeout:
             raise TimeoutError(f"report.json not found within {timeout} seconds.")
         print(f"Waiting for {report_path} to exist...")
         time.sleep(interval)
 
+    # Open report.json file
     with open(report_path, 'r') as file:
         data = json.load(file)
 
+    output_folder = f"{output_folder}/dynamic"
+    os.makedirs(output_folder, exist_ok=True)
+
     try:
         behavior = data['behavior']
-        print("Behavior object extracted successfully.")
-
-    except KeyError:
-        raise KeyError("'behavior' key not found in the JSON file.")
+        # print("Behavior object extracted successfully.")
+        if output_folder:
+            output_path = os.path.join(output_folder, "behavior_results.txt")
+            with open(output_path, 'w') as f:
+                f.write(behavior)
+    except Exception as e:
+        print(f"Error: {e}")
+        return []
     
     if os.path.exists(dump_path):
         return dump_path
     else:
         print("Memory dump not received.")
         return None
-    # if server_thread.is_alive():
-    #     print("Memory dump not received.")
-    #     return None
-    # else:
-    #     return dump_path
 
 # -------------------------
 # Phase 3: Memory Forensics
@@ -347,12 +361,25 @@ def run_plugin(plugin_name, memdump_path, pid=None, extra_args=None, output_fold
     except Exception as e:
         return plugin_name, f"Error: {e}"
 
+def prepare_dump(memdump_path):
+    memdump_dir = os.path.dirname(memdump_path)
+    memdump_file = os.path.join(memdump_dir, "memdump.raw")
+    command = f"zstdcat {memdump_path} > {memdump_file}"
+    subprocess.run(command, capture_output=True, shell=True)
+    if os.path.exists(memdump_file):
+        print("Memory dump file ready to process.")
+        return memdump_file
+    else:
+        print("Unable to process memory dump.")
+        return None
+
 def phase3(memdump_path, output_folder):
     # Get the descendant PIDs from the parent 'pyw.exe'
     # descendant_pids = get_descendant_pids(memdump_path)
     # if not descendant_pids:
     #     print("No descendant PIDs found.")
     #     return
+    memdump_file = prepare_dump(memdump_path=memdump_path)
 
     # Load plugins to run from config file
     plugins = []
@@ -462,7 +489,7 @@ def main():
 
     dump_path = None
     if args.phase2:
-        dump_path = phase2(file_path) #, args, output_folder)
+        dump_path = phase2(file_path, output_folder) #, args, output_folder)
 
     # run phase3 after phase2
     if args.phase2 and args.phase3:
