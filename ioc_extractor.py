@@ -192,7 +192,7 @@ def phase2(file_path):
     report_path = f"/opt/CAPEv2/storage/analyses/{task_id}/reports/report.json"
     dump_path =  f"/opt/CAPEv2/storage/analyses/{task_id}/memory/memdump.raw.zst"
     # Start HTTP server to receive the dump file for phase 3
-    server_thread = start_server(task_id)
+    server_thread = start_server(dump_path)
     start_time = time.time()
     timeout = 200
     interval = 5
