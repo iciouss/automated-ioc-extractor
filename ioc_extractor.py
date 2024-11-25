@@ -212,7 +212,7 @@ def phase2(file_path, output_folder):
 
     start_time = time.time()
     timeout = 200
-    interval = 5
+    interval = 15
     # Wait for report to be created
     while not os.path.exists(report_path):
         if time.time() - start_time > timeout:
@@ -361,6 +361,49 @@ def run_plugin(plugin_name, memdump_path, pid=None, extra_args=None, output_fold
     except Exception as e:
         return plugin_name, f"Error: {e}"
 
+def get_pids(memdump_file):
+    try:
+        # Get PID of pyw.exe (CAPE agent)
+        command = f"./tools/volatility3/vol.py -f {memdump_file} -r json windows.pslist.PsList"
+        # ["./vol.py", "-f", memdump_path, "-r", "json", "windows.pslist.PsList"]
+        pslist_result = subprocess.run(command, capture_output=True, shell=True, text=True)
+        processes = json.loads(pslist_result.stdout)
+        pyw_pid = None
+        for proc in processes:
+            if proc.get('ImageFileName', '').lower() == 'pyw.exe':
+                pyw_pid = proc.get('PID')
+                break
+        if pyw_pid is None:
+            print("Could not find process 'pyw.exe'")
+            return []
+        
+        # Get process tree of pyw.exe
+        command = f"./tools/volatility3/vol.py -f {memdump_file} -r json windows.pstree.PsTree --pid {str(pyw_pid)}"
+        pstree_result = subprocess.run(command, capture_output=True, shell=True, text=True)
+        pstree = json.loads(pstree_result.stdout)
+        
+        children_pids = []
+        def traverse_tree(process):
+            # Search for process pythonw.exe with command analyzer.py
+            if process.get('ImageFileName', '').lower() == 'pythonw.exe' and 'analyzer.py' in process.get('Cmd', ''):
+                collect_children_pids(process)
+            else:
+                for child in process.get('__children', []):
+                    traverse_tree(child)
+
+        def collect_children_pids(process):
+            for child in process.get('__children', []):
+                children_pids.append(child.get('PID'))
+                collect_children_pids(child)
+        
+        for process in pstree:
+            traverse_tree(process)
+
+        return children_pids
+    
+    except Exception as e:
+        return [], f"Error: {e}"
+    
 def prepare_dump(memdump_path):
     memdump_dir = os.path.dirname(memdump_path)
     memdump_file = os.path.join(memdump_dir, "memdump.raw")
@@ -374,13 +417,17 @@ def prepare_dump(memdump_path):
         return None
 
 def phase3(memdump_path, output_folder):
-    # Get the descendant PIDs from the parent 'pyw.exe'
-    # descendant_pids = get_descendant_pids(memdump_path)
-    # if not descendant_pids:
-    #     print("No descendant PIDs found.")
-    #     return
-    memdump_file = prepare_dump(memdump_path=memdump_path)
+    print("Starting memory forensics (phase3) ...")
+    print("======================================")
 
+    memdump_file = prepare_dump(memdump_path)
+    pid_list = get_pids(memdump_file)
+    if not pid_list:
+        print("No valid PIDs found.")
+        return
+    
+    print(pid_list)
+    
     # Load plugins to run from config file
     plugins = []
     for plugin_option in config.items('Phase3'):
