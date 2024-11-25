@@ -247,15 +247,6 @@ def phase2(file_path, output_folder):
 # -------------------------
 # Phase 3: Memory Forensics
 # -------------------------
-def run_volatility(plugin, memdump_path, pid=None, extra_args=None):
-    cmd = ["tools/volatility3/vol.py", "-f", memdump_path, plugin]
-    if pid:
-        cmd += ["--pid", str(pid)]
-    if extra_args:
-        cmd += extra_args  # Only add if not None
-    print(f"Executing command: {' '.join(cmd)}")  # Debugging info
-    result = subprocess.run(cmd, capture_output=True, text=True)
-    return result.stdout
 
 # Filtering functions (same as before)
 def filter_pslist(output):
@@ -279,53 +270,24 @@ def filter_handles(output):
 def filter_filescan(output):
     return [line for line in output.splitlines() if re.search(r"(exe|dll|tmp|scr|sys|bat|ps1|js|hta)", line, re.IGNORECASE)]
 
-def get_descendant_pids(memdump_path):
-    try:
-        # First, get the PID of 'pyw.exe'
-        cmd = ["./vol.py", "-f", memdump_path, "-r", "json", "windows.pslist.PsList"]
-        result = subprocess.run(cmd, capture_output=True, text=True)
-        pslist_output = result.stdout
-        processes = json.loads(pslist_output)
-        pyw_pid = None
-        for proc in processes:
-            if proc.get('ImageFileName', '').lower() == 'pyw.exe':
-                pyw_pid = proc.get('PID')
-                break
-        if pyw_pid is None:
-            print("Could not find process with ImageFileName 'pyw.exe'")
-            return []
+def run_volatility(plugin, memdump_file, pid=None, extra_args=None):
+    cmd = ["tools/volatility3/vol.py", "-f", memdump_file, plugin]
+    if pid:
+        cmd += ["--pid", str(pid)]
+    if extra_args:
+        cmd += extra_args  # Only add if not None
+    print(f"Executing command: {' '.join(cmd)}")  # Debugging info
+    result = subprocess.run(cmd, capture_output=True, text=True)
+    return result.stdout
 
-        # Now, get the process tree starting from 'pyw.exe'
-        cmd = ["./vol.py", "-f", memdump_path, "-r", "json", "windows.pstree.PsTree", "--pid", str(pyw_pid)]
-        result = subprocess.run(cmd, capture_output=True, text=True)
-        pstree_output = result.stdout
-        pstree = json.loads(pstree_output)
-        descendant_pids = []
 
-        def traverse_tree(process):
-            # Look for 'pythonw.exe' running 'analyzer.py'
-            if process.get('ImageFileName', '').lower() == 'pythonw.exe' and 'analyzer.py' in process.get('Cmd', ''):
-                collect_descendant_pids(process)
-            else:
-                for child in process.get('__children', []):
-                    traverse_tree(child)
-
-        def collect_descendant_pids(process):
-            for child in process.get('__children', []):
-                descendant_pids.append(child.get('PID'))
-                collect_descendant_pids(child)
-
-        # Traverse the tree starting from 'pyw.exe'
-        for process in pstree:
-            traverse_tree(process)
-
-        return descendant_pids
-    except Exception as e:
-        print(f"Error: {e}")
-        return []
-
-def run_plugin(plugin_name, memdump_path, pid=None, extra_args=None, output_folder=None):
+def run_plugin(plugin_name, memdump_file, pid=None, extra_args=None, output_folder=None):
     print(f"Running {plugin_name} for PID {pid if pid else 'N/A'}...")
+    command = f"./tools/volatility3/vol.py -f {memdump_file} {plugin_name}"
+    if pid:
+        command += f" --pid {pid}"
+    print(f"Executing command: {command}")  # Debugging info
+    return 
     try:
         args = []
         if pid:
@@ -337,7 +299,7 @@ def run_plugin(plugin_name, memdump_path, pid=None, extra_args=None, output_fold
                 adjusted_arg = arg.replace("{output_folder}", output_folder) if output_folder else arg
                 adjusted_args.append(adjusted_arg)
             args.extend(adjusted_args)
-        raw_output = run_volatility(plugin_name, memdump_path, None, args)
+        raw_output = run_volatility(plugin_name, memdump_file, None, args)
 
         # Apply appropriate filter
         if plugin_name == "windows.pslist.PsList":
@@ -369,7 +331,6 @@ def get_pids(memdump_file):
         print(f"Executing command: {command}")
         pslist_result = subprocess.run(command, capture_output=True, shell=True, text=True)
         processes = json.loads(pslist_result.stdout)
-        print(processes)
         pyw_pid = None
         for proc in processes:
             if proc.get('ImageFileName', '').lower() == 'pyw.exe':
@@ -427,8 +388,6 @@ def phase3(memdump_path, output_folder):
     if not pid_list:
         print("No valid PIDs found.")
         return
-    
-    print(pid_list)
 
     # Load plugins to run from config file
     plugins = []
@@ -444,19 +403,19 @@ def phase3(memdump_path, output_folder):
             extra_args = details[args_index:] if args_index else None
             plugins.append((plugin_name, requires_pid, extra_args))
 
-    print(plugins)
-    exit()
+    # print(plugins)
+    # exit()
 
     results = []
     with ThreadPoolExecutor() as executor:
         futures = {}
         for plugin in plugins:
             plugin_name, requires_pid, extra_args = plugin
-            if requires_pid:
-                for pid in descendant_pids:
-                    futures[executor.submit(run_plugin, plugin_name, memdump_path, pid, extra_args, output_folder)] = f"{plugin_name}_{pid}"
-            else:
-                futures[executor.submit(run_plugin, plugin_name, memdump_path, None, extra_args, output_folder)] = plugin_name
+            if requires_pid: 
+                for pid in pid_list: # execute plugin for each pid
+                    futures[executor.submit(run_plugin, plugin_name, memdump_file, pid, extra_args, output_folder)] = f"{plugin_name}_{pid}"
+            else: # execute plugin for whole memdump
+                futures[executor.submit(run_plugin, plugin_name, memdump_file, None, extra_args, output_folder)] = plugin_name
 
         for future in as_completed(futures):
             plugin_name = futures[future]
