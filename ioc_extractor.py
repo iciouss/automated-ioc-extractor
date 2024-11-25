@@ -172,11 +172,6 @@ def phase2(file_path):
         raise KeyError("'behavior' key not found in the JSON file.")
     
     print(behavior)
-    # Implement dynamic analysis tools as needed
-    # poetry run python utils/submit.py --machine cuckoo2 --timeout 60 samples/79e064130e4eca877a7724b2440575c365ecbecf2174c100ce9bdf10d6c73e6d.exe
-    # Success: File "/opt/CAPEv2/samples/79e064130e4eca877a7724b2440575c365ecbecf2174c100ce9bdf10d6c73e6d.exe" added as task with ID 82
-    # while !exists /opt/CAPEv2/storage/analyses/82/reports/report.json --> wait
-    # jq para extraer indicadores y a fichero
 
 # -------------------------
 # Phase 3: Memory Forensics

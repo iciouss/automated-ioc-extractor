@@ -1,4 +1,4 @@
-output/**
+output/**/*
 
 # Created by https://www.toptal.com/developers/gitignore/api/visualstudiocode,macos,windows,linux,python
 # Edit at https://www.toptal.com/developers/gitignore?templates=visualstudiocode,macos,windows,linux,python

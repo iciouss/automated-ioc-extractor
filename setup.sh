@@ -14,16 +14,17 @@ echo 'eval "$(pyenv virtualenv-init -)"' | tee -a ~/.bashrc ~/.profile > /dev/nu
 exec "$SHELL"
 
 # Install python 2 and python 3 
-pyenv install 2.7.18 3.12.7
+# pyenv install 2.7.18
+pyenv install 3.12.7
 
 # Create virtualenvs for tools on each version
-pyenv virtualenv 2.7.18 python2-tools
+# pyenv virtualenv 2.7.18 python2-tools
 pyenv virtualenv 3.12.7 python3-tools
 
 # Install python 2 dependencies
-pyenv activate python2-tools
-pip install -r requirements-python2.txt
-source deactivate
+# pyenv activate python2-tools
+# pip install -r requirements-python2.txt
+# source deactivate
 
 # Install python 3 dependencies
 pyenv activate python3-tools
@@ -35,6 +36,11 @@ wget https://github.com/YARAHQ/yara-forge/releases/latest/download/yara-forge-ru
 unzip yara-forge-rules-full.zip
 mv packages/full/*.yar .
 rm -r yara-forge-rules-full.zip packages/
+
+# Clone repositories
+git clone ttps://github.com/volatilityfoundation/volatility3 tools/volatility3
+git clone https://github.com/reverseame/modex tools/modex
+git clone https://github.com/f-block/volatility-plugins tools/volatility-plugins
 
 # Install docker to run in user mode
 curl -fsSL https://get.docker.com | sudo bash
