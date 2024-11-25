@@ -379,11 +379,15 @@ def prepare_dump(memdump_path):
         print("Unable to process memory dump.")
         return None
 
-def phase3(memdump_path, output_folder):
+def phase3(memdump_path, args, output_folder):
     print("Starting memory forensics (phase3) ...")
     print("======================================")
 
-    memdump_file = prepare_dump(memdump_path)
+    if args.memdump:
+        memdump_file = memdump_path
+    else:    
+        memdump_file = prepare_dump(memdump_path)
+        
     pid_list = get_pids(memdump_file)
     if not pid_list:
         print("No valid PIDs found.")
@@ -502,14 +506,14 @@ def main():
     # run phase3 after phase2
     if args.phase2 and args.phase3:
         if dump_path:
-            phase3(dump_path, output_folder)
+            phase3(dump_path, args, output_folder)
     # run only phase 3
     else: 
         if args.phase3:
             if not args.memdump:
                 print("Memory dump file is required for Phase 3.")
                 sys.exit(1)
-            phase3(args.memdump, output_folder)
+            phase3(args.memdump, args, output_folder)
     
     generate_report()
 
