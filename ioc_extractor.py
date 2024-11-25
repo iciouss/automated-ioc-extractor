@@ -233,7 +233,7 @@ def phase2(file_path, output_folder):
         if output_folder:
             output_path = os.path.join(output_folder, "behavior_results.txt")
             with open(output_path, 'w') as f:
-                f.write(behavior)
+                json.dump(behavior, f)
     except Exception as e:
         print(f"Error: {e}")
         return []
