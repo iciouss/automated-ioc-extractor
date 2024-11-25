@@ -117,6 +117,7 @@ def phase1(file_path, args, output_folder):
 
     results = {}
     output_folder = f"{output_folder}/static"
+    os.makedirs(output_folder, exist_ok=True)
     with ThreadPoolExecutor() as executor:
         futures = {}
         for tool_name in tools_to_run:
