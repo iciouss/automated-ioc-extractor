@@ -150,7 +150,7 @@ class SimpleHTTPRequestHandler(BaseHTTPRequestHandler):
         file_data = self.rfile.read(content_length)
         # dump_dir = f"/opt/CAPEv2/storage/analyses/{self.dump_path}/memory"
         # filename = f"memdump.raw.zst"
-        # os.makedirs(dump_dir, exist_ok=True)
+        os.makedirs(os.path.dirname(self.dump_path), exist_ok=True)
         with open(self.dump_path, 'wb') as f:
             f.write(file_data)
         # Send response
