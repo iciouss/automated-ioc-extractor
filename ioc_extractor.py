@@ -212,11 +212,16 @@ def phase2(file_path):
     except KeyError:
         raise KeyError("'behavior' key not found in the JSON file.")
     
-    if server_thread.is_alive():
+    if os.path.exists(dump_path):
+        return dump_path
+    else:
         print("Memory dump not received.")
         return None
-    else:
-        return dump_path
+    # if server_thread.is_alive():
+    #     print("Memory dump not received.")
+    #     return None
+    # else:
+    #     return dump_path
 
 # -------------------------
 # Phase 3: Memory Forensics
