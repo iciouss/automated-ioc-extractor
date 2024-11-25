@@ -156,7 +156,7 @@ class SimpleHTTPRequestHandler(BaseHTTPRequestHandler):
         # Send response
         self.send_response(200)
         self.end_headers()
-        self.wfile.write(b'File received')
+        self.wfile.write(b'File received\n')
         
         # Stop the server after handling the request
         if self.stop_server_callback:
@@ -168,7 +168,7 @@ def start_server(task_id, port=8888):
     server = HTTPServer(('0.0.0.0', port), SimpleHTTPRequestHandler)
     
     # Define a callback to stop the server
-    def stop_server():
+    def stop_server(*args):
         server.shutdown()
     
     SimpleHTTPRequestHandler.stop_server_callback = stop_server
