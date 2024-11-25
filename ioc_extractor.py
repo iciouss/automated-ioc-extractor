@@ -137,10 +137,10 @@ def phase1(file_path, args, output_folder):
 # Phase 2: Dynamic Analysis
 # -------------------------
 class SimpleHTTPRequestHandler(BaseHTTPRequestHandler):
-    task_id = None 
+    dump_path = None 
 
     def do_POST(self):
-        if not self.task_id:
+        if not self.dump_path:
             self.send_response(500)
             self.end_headers()
             self.wfile.write(b'Server not properly initialized.')
@@ -148,10 +148,10 @@ class SimpleHTTPRequestHandler(BaseHTTPRequestHandler):
     
         content_length = int(self.headers['Content-Length'])
         file_data = self.rfile.read(content_length)
-        dump_dir = f"/opt/CAPEv2/storage/analyses/{self.task_id}/memory"
-        filename = f"memdump_{int(time.time())}.raw.zst"
-        os.makedirs(dump_dir, exist_ok=True)
-        with open(os.path.join(dump_dir, filename), 'wb') as f:
+        # dump_dir = f"/opt/CAPEv2/storage/analyses/{self.dump_path}/memory"
+        # filename = f"memdump.raw.zst"
+        # os.makedirs(dump_dir, exist_ok=True)
+        with open(self.dump_path, 'wb') as f:
             f.write(file_data)
         # Send response
         self.send_response(200)
@@ -163,8 +163,8 @@ class SimpleHTTPRequestHandler(BaseHTTPRequestHandler):
             print("Stopping server after receiving the file...")
             self.stop_server_callback()
 
-def start_server(task_id, port=8888):
-    SimpleHTTPRequestHandler.task_id = task_id
+def start_server(dump_path, port=8888):
+    SimpleHTTPRequestHandler.dump_path = dump_path
     server = HTTPServer(('0.0.0.0', port), SimpleHTTPRequestHandler)
     
     # Define a callback to stop the server
@@ -175,7 +175,7 @@ def start_server(task_id, port=8888):
 
    # Run the server in a separate thread
     def server_thread():
-        print(f"Server starting on port {port}, task ID: {task_id}")
+        print(f"Server starting on port {port}, dump path: {dump_path}")
         server.serve_forever()
 
     thread = threading.Thread(target=server_thread, daemon=True)
@@ -190,8 +190,9 @@ def phase2(file_path):
     result = subprocess.run(command, shell=True, capture_output=True, text=True)
     task_id = int(re.search(r'ID (\d+)', result.stdout).group(1))
     report_path = f"/opt/CAPEv2/storage/analyses/{task_id}/reports/report.json"
+    dump_path =  f"/opt/CAPEv2/storage/analyses/{task_id}/memory/memdump.raw.zst"
     # Start HTTP server to receive the dump file for phase 3
-    start_server(task_id)
+    server_thread = start_server(task_id)
     start_time = time.time()
     timeout = 200
     interval = 5
@@ -211,7 +212,11 @@ def phase2(file_path):
     except KeyError:
         raise KeyError("'behavior' key not found in the JSON file.")
     
-    print(behavior)
+    if server_thread.is_alive():
+        print("Memory dump not received.")
+        return None
+    else:
+        return dump_path
 
 # -------------------------
 # Phase 3: Memory Forensics
@@ -442,15 +447,22 @@ def main():
     if args.phase1:
         phase1(file_path, args, output_folder)
 
-    if args.phase2:
-        phase2(file_path) #, args, output_folder)
 
-    # Run Phase 3 after Phase 2
-    if args.phase3:
-        if not args.memdump:
-            print("Memory dump file is required for Phase 3.")
-            sys.exit(1)
-        phase3(args.memdump, output_folder)
+    dump_path = None
+    if args.phase2:
+        dump_path = phase2(file_path) #, args, output_folder)
+
+    # run phase3 after phase2
+    if args.phase2 and args.phase3:
+        if dump_path:
+            phase3(dump_path, output_folder)
+    # run only phase 3
+    else: 
+        if args.phase3:
+            if not args.memdump:
+                print("Memory dump file is required for Phase 3.")
+                sys.exit(1)
+            phase3(args.memdump, output_folder)
     
     generate_report()
 
