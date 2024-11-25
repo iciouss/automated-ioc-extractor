@@ -366,8 +366,10 @@ def get_pids(memdump_file):
         # Get PID of pyw.exe (CAPE agent)
         command = f"./tools/volatility3/vol.py -f {memdump_file} -r json windows.pslist.PsList"
         # ["./vol.py", "-f", memdump_path, "-r", "json", "windows.pslist.PsList"]
+        print(f"Executing command: {command}")
         pslist_result = subprocess.run(command, capture_output=True, shell=True, text=True)
         processes = json.loads(pslist_result.stdout)
+        print(processes)
         pyw_pid = None
         for proc in processes:
             if proc.get('ImageFileName', '').lower() == 'pyw.exe':
@@ -427,7 +429,7 @@ def phase3(memdump_path, output_folder):
         return
     
     print(pid_list)
-    
+
     # Load plugins to run from config file
     plugins = []
     for plugin_option in config.items('Phase3'):
