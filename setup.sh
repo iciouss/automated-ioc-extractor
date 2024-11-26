@@ -46,17 +46,23 @@ rm -r yara-forge-rules-full.zip packages/
 
 # Clone repositories
 git clone https://github.com/volatilityfoundation/volatility3 tools/volatility3
+git clone https://github.com/horsicq/Detect-It-Easy tools/Detect-It-Easy
+
+# Clone Volatility3 plugins
 git clone https://github.com/reverseame/modex tools/modex
 git clone https://github.com/f-block/volatility-plugins tools/volatility-plugins
-git clone https://github.com/horsicq/Detect-It-Easy tools/Detect-It-Easy
+git clone https://github.com/orchechik/check_spoof tools/check_spoof
+
+# Copy modules to Volatility folder
+cp tools/modex/*.py tools/volatility3/volatility3/framework/plugins/windows/.
+cp tools/check_spoof/*.py tools/volatility3/volatility3/framework/plugins/windows/.
+cp tools/volatility-plugins/*.py tools/volatility3/volatility3/framework/plugins/windows/.
+
+# Apply fixes for modules
+cp patches/*.py tools/volatility3/volatility3/framework/plugins/windows/.
 
 # Build DIE docker image
 docker build tools/Detect-It-Easy/. -t horsicq:diec
-
-# Locate plugins in volatility folder
-# cp tools/modex/modex.py tools/volatility3/volatility3/framework/plugins/windows/modex.py
-cp patched/modex.py tools/volatility3/volatility3/framework/plugins/windows/.
-cp tools/volatility-plugins/*.py tools/volatility3/volatility3/framework/plugins/windows/.
 
 # Install CAPA from latest release
 CAPA_VERSION=$(curl 'https://api.github.com/repos/mandiant/capa/releases/latest' | jq -r .tag_name)

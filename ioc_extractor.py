@@ -101,6 +101,11 @@ def diec(file_path, output_folder):
     output = run_tool(command, output_file='diec_result.txt', output_folder=output_folder)
     return output
 
+def ssdeep(file_path, output_folder):
+    command = f"ssdeep {file_path}"
+    output = run_tool(command, output_file='ssdeep_result.txt', output_folder=output_folder)
+    return output
+
 def phase1(file_path, args, output_folder):
     print("Starting static analysis (phase1) ...")
     print("=====================================")
@@ -248,58 +253,37 @@ def phase2(file_path, output_folder):
         return []
     
     if os.path.exists(dump_path):
-        return dump_path
+        print("Memory dump received.")
     else:
-        print("Memory dump not received.")
-        return None
+        print("Memory dump NOT received.")
+        dump_path = None
+    
+    print("=====================================")
+    print(f"Dynamic analysis completed. Results are available in {output_folder}")
+    print("=====================================")
+    return dump_path
 
 # -------------------------
 # Phase 3: Memory Forensics
 # -------------------------
 
-# Filtering functions (same as before)
-def filter_pslist(output):
-    return [line for line in output.splitlines() if re.search(r"(short lifespan|suspicious process)", line, re.IGNORECASE)]
-
-def filter_malfind(output):
-    return [line for line in output.splitlines() if re.search(r"(Executable|Injected)", line, re.IGNORECASE)]
-
-def filter_netscan(output):
-    return [line for line in output.splitlines() if re.search(r"(foreign|unknown|non-local|185\.234\.219\.55)", line, re.IGNORECASE)]
-
-def filter_cmdline(output):
-    return [line for line in output.splitlines() if re.search(r"(base64|EncodedCommand|wscript|powershell|cmd\.exe)", line, re.IGNORECASE)]
-
-def filter_dlllist(output):
-    return [line for line in output.splitlines() if re.search(r"(AppData|Temp|unknown|unloaded|unsigned|random\.dll)", line, re.IGNORECASE)]
-
-def filter_handles(output):
-    return [line for line in output.splitlines() if re.search(r"(Temp|RunOnce|Run|Registry|HKEY|startup)", line, re.IGNORECASE)]
-
-def filter_filescan(output):
-    return [line for line in output.splitlines() if re.search(r"(exe|dll|tmp|scr|sys|bat|ps1|js|hta)", line, re.IGNORECASE)]
-
-# def run_tool(command, output_file=None, output_folder=None):
-#     print(f"Executing command: {command}")
-#     result = subprocess.run(command, shell=True, capture_output=True, text=True)
-#     if output_file:
-#         if output_folder:
-#             output_path = os.path.join(output_folder, output_file)
-#             with open(output_path, 'w') as f:
-#                 f.write(result.stdout)
-#     return result.stdout
-
-# def run_volatility(plugin, memdump_file, pid=None, extra_args=None):
-#     cmd = ["tools/volatility3/vol.py", "-f", memdump_file, plugin]
-#     command 
-#     if pid:
-#         cmd += ["--pid", str(pid)]
-#     if extra_args:
-#         cmd += extra_args  # Only add if not None
-#     print(f"Executing command: {' '.join(cmd)}")  # Debugging info
-#     result = subprocess.run(cmd, capture_output=True, text=True)
-    return result.stdout
-
+def apply_filters(plugin_name, output):
+    if plugin_name == "windows.pslist":
+        return [line for line in output.splitlines() if re.search(r"(short lifespan|suspicious process)", line, re.IGNORECASE)]
+    elif plugin_name == "windows.malfind":
+        return [line for line in output.splitlines() if re.search(r"(Executable|Injected)", line, re.IGNORECASE)]
+    elif plugin_name == "windows.netscan":
+        return [line for line in output.splitlines() if re.search(r"(foreign|unknown|non-local)", line, re.IGNORECASE)]
+    elif plugin_name == "windows.cmdline":
+        return [line for line in output.splitlines() if re.search(r"(base64|EncodedCommand|wscript|powershell|cmd\.exe)", line, re.IGNORECASE)]
+    elif plugin_name == "windows.dlllist":
+        return [line for line in output.splitlines() if re.search(r"(AppData|Temp|unknown|unloaded|unsigned|random\.dll)", line, re.IGNORECASE)]
+    elif plugin_name == "windows.handles":
+        return [line for line in output.splitlines() if re.search(r"(Temp|RunOnce|Run|Registry|HKEY|startup)", line, re.IGNORECASE)]
+    elif plugin_name == "windows.filescan":
+        return [line for line in output.splitlines() if re.search(r"(exe|dll|tmp|scr|sys|bat|ps1|js|hta)", line, re.IGNORECASE)]
+    else:
+        return None
 
 def run_volatility(plugin_name, memdump_file, pid=None, extra_args=None, output_folder=None):
     print(f"Running {plugin_name} for PID {pid if pid else 'N/A'}...")
@@ -311,44 +295,18 @@ def run_volatility(plugin_name, memdump_file, pid=None, extra_args=None, output_
     print(f"Executing command: {command}")  # Debugging info
     result = subprocess.run(command, shell=True, capture_output=True, text=True)
     if output_folder:
-        output_path = os.path.join(output_folder, f"{plugin_name}_results.txt")
-        with open(output_path, 'w') as f:
-                f.write(result.stdout)
-    return result.stdout
-    try:
-        args = []
-        if pid:
-            args.extend(["--pid", str(pid)])
-        if extra_args:
-            # Adjust extra_args for output folder
-            adjusted_args = []
-            for arg in extra_args:
-                adjusted_arg = arg.replace("{output_folder}", output_folder) if output_folder else arg
-                adjusted_args.append(adjusted_arg)
-            args.extend(adjusted_args)
-        raw_output = run_volatility(plugin_name, memdump_file, None, args)
+        raw_output_folder = f"{output_folder}/raw"
+        filtered_output_folder = f"{output_folder}/filtered"
+        os.makedirs(raw_output_folder, exist_ok=True)
+        os.makedirs(filtered_output_folder, exist_ok=True)
 
-        # Apply appropriate filter
-        if plugin_name == "windows.pslist.PsList":
-            filtered_output = filter_pslist(raw_output)
-        elif plugin_name == "windows.malfind.Malfind":
-            filtered_output = filter_malfind(raw_output)
-        elif plugin_name == "windows.netscan.NetScan":
-            filtered_output = filter_netscan(raw_output)
-        elif plugin_name == "windows.cmdline.CmdLine":
-            filtered_output = filter_cmdline(raw_output)
-        elif plugin_name == "windows.dlllist.DllList":
-            filtered_output = filter_dlllist(raw_output)
-        elif plugin_name == "windows.handles.Handles":
-            filtered_output = filter_handles(raw_output)
-        elif plugin_name == "windows.filescan.FileScan":
-            filtered_output = filter_filescan(raw_output)
-        else:
-            filtered_output = raw_output.splitlines()
+        raw_output_file = os.path.join(raw_output_folder, f"{plugin_name}_results.txt")
+        with open(raw_output_file, 'w') as f:
+            f.write(result.stdout)
 
-        return plugin_name, filtered_output
-    except Exception as e:
-        return plugin_name, f"Error: {e}"
+        filtered_output_file = os.path.join(filtered_output_folder, f"{plugin_name}_results.txt")
+        with open(filtered_output_file, 'w') as f:
+            f.write(apply_filters(result.stdout, plugin_name))
 
 def get_pids(memdump_file):
     try:
@@ -436,10 +394,9 @@ def phase3(memdump_path, args, output_folder):
             extra_args = ' '.join(details[args_index:]) if args_index else None
             plugins.append((plugin_name, requires_pid, extra_args))
 
-    print(plugins)
-    # exit()
+    # print(plugins)
 
-    output_folder = f"{output_folder}/dynamic"
+    output_folder = f"{output_folder}/memory"
     os.makedirs(output_folder, exist_ok=True)
     results = []
     with ThreadPoolExecutor() as executor:
@@ -460,15 +417,9 @@ def phase3(memdump_path, args, output_folder):
             except Exception as e:
                 results.append((plugin_name, f"Error: {e}"))
 
-    for name, output in results:
-        print(f"\n=== {name} ===")
-        if isinstance(output, list):
-            if output:
-                print("\n".join(output))
-            else:
-                print("No suspicious items found.")
-        else:
-            print(output)
+    print("=====================================")
+    print(f"Memory forensics analysis completed. Results are available in {output_folder}")
+    print("=====================================")
 
 def generate_report():
     pass
@@ -487,48 +438,14 @@ def main():
     file_path = args.file
     output_folder = args.output_folder
     os.makedirs(output_folder, exist_ok=True)
-    
-    os.makedirs(output_folder, exist_ok=True)
 
     # If no phases are specified, run all phases
     if not (args.phase1 or args.phase2 or args.phase3):
         args.phase1 = args.phase2 = args.phase3 = True
 
-    # phase1_results = phase2_results = None
-
-    # # Execute Phases 1 and 2 in parallel
-    # with ThreadPoolExecutor() as executor:
-    #     futures = {}
-    #     if args.phase1:
-    #         futures[executor.submit(phase1, file_path, args, output_folder)] = 'phase1'
-    #     if args.phase2:
-    #         futures[executor.submit(phase2, file_path)] = 'phase2'
-
-    #     # Collect results from Phases 1 and 2
-    #     for future in as_completed(futures):
-    #         phase = futures[future]
-    #         try:
-    #             if phase == 'phase1':
-    #                 phase1_results = future.result()
-    #             elif phase == 'phase2':
-    #                 phase2_results = future.result()
-    #         except Exception as e:
-    #             print(f"Error running {phase}: {e}")
-
-    # # Display Phase 1 results
-    # if phase1_results:
-    #     for tool_name, output in phase1_results.items():
-    #         print(f"\n=== {tool_name} ===")
-    #         print(output)
-
-    # # Placeholder for Phase 2 results
-    # if phase2_results:
-    #     print("\n=== Phase 2 Results ===")
-    #     print(phase2_results)
 
     if args.phase1:
         phase1(file_path, args, output_folder)
-
 
     dump_path = None
     if args.phase2:
