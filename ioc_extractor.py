@@ -419,6 +419,8 @@ def phase3(memdump_path, args, output_folder):
     if not pid_list:
         print("No valid PIDs found.")
         return
+    else: 
+        print(f"Running analysis on these PIDs: {pid_list}")
 
     # Load plugins to run from config file
     plugins = []
@@ -429,14 +431,16 @@ def phase3(memdump_path, args, output_folder):
             # Parse plugin details
             details = plugin_entry.split(',')
             plugin_name = details[0]
-            requires_pid = 'pid' in details
+            requires_pid = 'use_pid' in details
             args_index = details.index('args') + 1 if 'args' in details else None
-            extra_args = details[args_index:] if args_index else None
+            extra_args = ' '.join(details[args_index:]) if args_index else None
             plugins.append((plugin_name, requires_pid, extra_args))
 
     print(plugins)
     # exit()
 
+    output_folder = f"{output_folder}/dynamic"
+    os.makedirs(output_folder, exist_ok=True)
     results = []
     with ThreadPoolExecutor() as executor:
         futures = {}
