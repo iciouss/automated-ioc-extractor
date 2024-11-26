@@ -279,24 +279,42 @@ def filter_handles(output):
 def filter_filescan(output):
     return [line for line in output.splitlines() if re.search(r"(exe|dll|tmp|scr|sys|bat|ps1|js|hta)", line, re.IGNORECASE)]
 
-def run_volatility(plugin, memdump_file, pid=None, extra_args=None):
-    cmd = ["tools/volatility3/vol.py", "-f", memdump_file, plugin]
-    if pid:
-        cmd += ["--pid", str(pid)]
-    if extra_args:
-        cmd += extra_args  # Only add if not None
-    print(f"Executing command: {' '.join(cmd)}")  # Debugging info
-    result = subprocess.run(cmd, capture_output=True, text=True)
+# def run_tool(command, output_file=None, output_folder=None):
+#     print(f"Executing command: {command}")
+#     result = subprocess.run(command, shell=True, capture_output=True, text=True)
+#     if output_file:
+#         if output_folder:
+#             output_path = os.path.join(output_folder, output_file)
+#             with open(output_path, 'w') as f:
+#                 f.write(result.stdout)
+#     return result.stdout
+
+# def run_volatility(plugin, memdump_file, pid=None, extra_args=None):
+#     cmd = ["tools/volatility3/vol.py", "-f", memdump_file, plugin]
+#     command 
+#     if pid:
+#         cmd += ["--pid", str(pid)]
+#     if extra_args:
+#         cmd += extra_args  # Only add if not None
+#     print(f"Executing command: {' '.join(cmd)}")  # Debugging info
+#     result = subprocess.run(cmd, capture_output=True, text=True)
     return result.stdout
 
 
-def run_plugin(plugin_name, memdump_file, pid=None, extra_args=None, output_folder=None):
+def run_volatility(plugin_name, memdump_file, pid=None, extra_args=None, output_folder=None):
     print(f"Running {plugin_name} for PID {pid if pid else 'N/A'}...")
     command = f"./tools/volatility3/vol.py -f {memdump_file} {plugin_name}"
     if pid:
         command += f" --pid {pid}"
+    if extra_args:
+        command += f" {extra_args}"
     print(f"Executing command: {command}")  # Debugging info
-    return 
+    result = subprocess.run(command, shell=True, capture_output=True, text=True)
+    if output_folder:
+        output_path = os.path.join(output_folder, f"{plugin_name}_results.txt")
+        with open(output_path, 'w') as f:
+                f.write(result.stdout)
+    return result.stdout
     try:
         args = []
         if pid:
@@ -416,7 +434,7 @@ def phase3(memdump_path, args, output_folder):
             extra_args = details[args_index:] if args_index else None
             plugins.append((plugin_name, requires_pid, extra_args))
 
-    # print(plugins)
+    print(plugins)
     # exit()
 
     results = []
@@ -426,9 +444,9 @@ def phase3(memdump_path, args, output_folder):
             plugin_name, requires_pid, extra_args = plugin
             if requires_pid: 
                 for pid in pid_list: # execute plugin for each pid
-                    futures[executor.submit(run_plugin, plugin_name, memdump_file, pid, extra_args, output_folder)] = f"{plugin_name}_{pid}"
+                    futures[executor.submit(run_volatility, plugin_name, memdump_file, pid, extra_args, output_folder)] = f"{plugin_name}_{pid}"
             else: # execute plugin for whole memdump
-                futures[executor.submit(run_plugin, plugin_name, memdump_file, None, extra_args, output_folder)] = plugin_name
+                futures[executor.submit(run_volatility, plugin_name, memdump_file, None, extra_args, output_folder)] = plugin_name
 
         for future in as_completed(futures):
             plugin_name = futures[future]
