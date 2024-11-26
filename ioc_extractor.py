@@ -268,11 +268,11 @@ def phase2(file_path, output_folder):
 # -------------------------
 
 def apply_filters(plugin_name, output):
-    print(f"Filtering plugin: {plugin_name}")  # Debugging info
+    # print(f"Filtering plugin: {plugin_name}")  # Debugging info
     patterns = {
         "windows.pslist": r"(short lifespan|suspicious process)",
         "windows.malfind": r"(Executable|Injected)",
-        "windows.netscan": r"(foreign|unknown|non-local)",
+        "windows.netscan": r"(\b\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\b|http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\(\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+)",
         "windows.cmdline": r"(base64|EncodedCommand|wscript|powershell|cmd\.exe)",
         "windows.dlllist": r"(AppData|Temp|unknown|unloaded|unsigned|random\.dll)",
         "windows.handles": r"(Temp|RunOnce|Run|Registry|HKEY|startup)",
@@ -284,26 +284,6 @@ def apply_filters(plugin_name, output):
     
     filtered_lines = [line for line in output.splitlines() if re.search(pattern, line, re.IGNORECASE)]
     return '\n'.join(filtered_lines)
-
-    # for line in output.splitlines():
-    #     if re.search(r"(exe|dll|tmp|scr|sys|bat|ps1|js|hta)", line, re.IGNORECASE):
-    #         print(line)
-    # if plugin_name == "windows.pslist":
-    #     return [line for line in output.splitlines() if re.search(r"(short lifespan|suspicious process)", line, re.IGNORECASE)]
-    # elif plugin_name == "windows.malfind":
-    #     return [line for line in output.splitlines() if re.search(r"(Executable|Injected)", line, re.IGNORECASE)]
-    # elif plugin_name == "windows.netscan":
-    #     return [line for line in output.splitlines() if re.search(r"(foreign|unknown|non-local)", line, re.IGNORECASE)]
-    # elif plugin_name == "windows.cmdline":
-    #     return [line for line in output.splitlines() if re.search(r"(base64|EncodedCommand|wscript|powershell|cmd\.exe)", line, re.IGNORECASE)]
-    # elif plugin_name == "windows.dlllist":
-    #     return [line for line in output.splitlines() if re.search(r"(AppData|Temp|unknown|unloaded|unsigned|random\.dll)", line, re.IGNORECASE)]
-    # elif plugin_name == "windows.handles":
-    #     return [line for line in output.splitlines() if re.search(r"(Temp|RunOnce|Run|Registry|HKEY|startup)", line, re.IGNORECASE)]
-    # elif plugin_name == "windows.filescan":
-    #     return [line for line in output.splitlines() if re.search(r"(exe|dll|tmp|scr|sys|bat|ps1|js|hta)", line, re.IGNORECASE)]
-    # else:
-    #     return None
 
 def run_volatility(plugin_name, memdump_file, pid=None, extra_args=None, output_folder=None):
     dumps_folder = f"{output_folder}/dumps" # used for plugins with --dump
