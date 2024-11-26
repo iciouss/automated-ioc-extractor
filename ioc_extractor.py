@@ -215,7 +215,7 @@ def extract_results(data, output_folder):
             with open(output_path, 'w') as f:
                 f.write('\n'.join(values))
         
-        network = data['behavior']['network']
+        network = data['network']
         hosts_output_path = os.path.join(output_folder, "hosts_results.txt")
         with open(hosts_output_path, 'w') as f:
             f.write('\n'.join(network['hosts']))
