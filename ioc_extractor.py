@@ -13,6 +13,7 @@ from http.server import BaseHTTPRequestHandler, HTTPServer
 import threading
 
 config = configparser.ConfigParser()
+config.optionxform = str
 config.read('tools.ini')
 
 # -------------------------
