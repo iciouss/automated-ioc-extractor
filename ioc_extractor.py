@@ -281,17 +281,17 @@ def phase2(file_path, output_folder):
 def apply_filters(plugin_name, output):
     # print(f"Filtering plugin: {plugin_name}")  # Debugging info
     patterns = {
-        "windows.pslist": r"(short lifespan|suspicious process)",
-        "windows.malfind": r"(Executable|Injected)",
         "windows.netscan": r"(\b\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\b|http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\(\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+)",
         "windows.cmdline": r"(base64|EncodedCommand|wscript|powershell|cmd\.exe)",
-        "windows.dlllist": r"(AppData|Temp|unknown|unloaded|unsigned|random\.dll)",
-        "windows.handles": r"(Temp|RunOnce|Run|Registry|HKEY|startup)",
-        "windows.filescan": r"(exe|dll|tmp|scr|sys|bat|ps1|js|hta)"
+        "windows.ldrmodule": r"(.*True.*False.*True.*\n)",
+        "windows.dlllist": r"(AppData|Temp|random\.dll)",
+        "windows.handles": r"(Temp|RunOnce|Run|Registry|HKEY|startup|NamedPipe|CurrentVersion|Security Center|Winlogon)",
+        "windows.filescan": r"(\.exe|\.dll|\.tmp|\.scr|\.sys|\.bat|\.ps1|\.js|\.hta)",
+        "windows.vadinfo": r"(EXECUTABLE)"
     }
     pattern = patterns.get(plugin_name)
     if not pattern:
-        return None
+        return output
     
     filtered_lines = [line for line in output.splitlines() if re.search(pattern, line, re.IGNORECASE)]
     return '\n'.join(filtered_lines)
