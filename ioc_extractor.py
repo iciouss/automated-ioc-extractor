@@ -268,6 +268,7 @@ def phase2(file_path, output_folder):
 # -------------------------
 
 def apply_filters(plugin_name, output):
+    print(f"Filtering plugin: {plugin_name}")  # Debugging info
     if plugin_name == "windows.pslist":
         return [line for line in output.splitlines() if re.search(r"(short lifespan|suspicious process)", line, re.IGNORECASE)]
     elif plugin_name == "windows.malfind":
@@ -306,7 +307,7 @@ def run_volatility(plugin_name, memdump_file, pid=None, extra_args=None, output_
 
         filtered_output_file = os.path.join(filtered_output_folder, f"{plugin_name}.{pid}_results.txt")
         with open(filtered_output_file, 'w') as f:
-            f.write(apply_filters(result.stdout, plugin_name))
+            f.write(apply_filters(plugin_name, result.stdout))
 
 def get_pids(memdump_file):
     try:
