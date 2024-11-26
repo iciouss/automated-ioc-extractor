@@ -158,21 +158,30 @@ class SimpleHTTPRequestHandler(BaseHTTPRequestHandler):
             self.wfile.write(b'Server not properly initialized.')
             return
     
-        content_length = int(self.headers['Content-Length'])
-        file_data = self.rfile.read(content_length)
-        # Check folder and save file
-        os.makedirs(os.path.dirname(self.dump_path), exist_ok=True)
-        with open(self.dump_path, 'wb') as f:
-            f.write(file_data)
+        try:
+            content_length = int(self.headers['Content-Length'])
+            file_data = self.rfile.read(content_length)
+            # Check folder and save file
+            os.makedirs(os.path.dirname(self.dump_path), exist_ok=True)
+            with open(self.dump_path, 'wb') as f:
+                f.write(file_data)
+            
+            self.send_response(200)
+            self.end_headers()
+            self.wfile.write(b'File received')
+            self.wfile.flush()
         
-        self.send_response(200)
-        self.end_headers()
-        self.wfile.write(b'File received')
+        except:
+            self.send_response(500)
+            self.end_headers()
+            self.wfile.write(b'Failed to save the file')
+            self.wfile.flush()
         
-        # Stop the server after handling the request
-        if self.stop_server_callback:
-            print("Stopping server after receiving the file...")
-            self.stop_server_callback()
+        finally:        
+            # Stop the server after handling the request
+            if self.stop_server_callback:
+                print("Stopping server after receiving the file...")
+                self.stop_server_callback()
 
 def start_server(dump_path, port=8888):
     SimpleHTTPRequestHandler.dump_path = dump_path
