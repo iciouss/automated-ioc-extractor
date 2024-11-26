@@ -84,6 +84,8 @@ def xxd(file_path, output_folder):
 def yara(file_path, output_folder):
     command = f"yara yara-rules-full.yar {file_path}"
     output = run_tool(command, output_file='yara_result.txt', output_folder=output_folder)
+    command = f"sed -i '/===== PROFILING INFORMATION =====/,$d' {output_folder}/yara_result.txt"
+    output = run_tool(command, output_file=None, output_folder=None)
     return output
 
 def imphash(file_path, output_folder):
