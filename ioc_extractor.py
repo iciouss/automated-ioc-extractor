@@ -268,7 +268,9 @@ def phase2(file_path, output_folder):
 # -------------------------
 
 def apply_filters(plugin_name, output):
-    # print(f"Filtering plugin: {plugin_name}")  # Debugging info
+    print(f"Filtering plugin: {plugin_name}")  # Debugging info
+    for line in output.splitlines():
+        print(line)
     if plugin_name == "windows.pslist":
         return [line for line in output.splitlines() if re.search(r"(short lifespan|suspicious process)", line, re.IGNORECASE)]
     elif plugin_name == "windows.malfind":
