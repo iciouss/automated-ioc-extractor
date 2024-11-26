@@ -286,7 +286,6 @@ def apply_filters(plugin_name, output):
         return None
 
 def run_volatility(plugin_name, memdump_file, pid=None, extra_args=None, output_folder=None):
-    print(f"Running {plugin_name} for PID {pid if pid else 'N/A'}...")
     command = f"./tools/volatility3/vol.py -f {memdump_file} {plugin_name}"
     if pid:
         command += f" --pid {pid}"
@@ -297,14 +296,15 @@ def run_volatility(plugin_name, memdump_file, pid=None, extra_args=None, output_
     if output_folder:
         raw_output_folder = f"{output_folder}/raw"
         filtered_output_folder = f"{output_folder}/filtered"
+        pid = str(pid) if pid else "all"
         os.makedirs(raw_output_folder, exist_ok=True)
         os.makedirs(filtered_output_folder, exist_ok=True)
 
-        raw_output_file = os.path.join(raw_output_folder, f"{plugin_name}_results.txt")
+        raw_output_file = os.path.join(raw_output_folder, f"{plugin_name}.{pid}_results.txt")
         with open(raw_output_file, 'w') as f:
             f.write(result.stdout)
 
-        filtered_output_file = os.path.join(filtered_output_folder, f"{plugin_name}_results.txt")
+        filtered_output_file = os.path.join(filtered_output_folder, f"{plugin_name}.{pid}_results.txt")
         with open(filtered_output_file, 'w') as f:
             f.write(apply_filters(result.stdout, plugin_name))
 
