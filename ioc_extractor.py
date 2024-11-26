@@ -207,6 +207,27 @@ def start_server(dump_path, port=8888):
     thread.start()
     return thread
 
+def extract_results(data, output_folder):
+    try:
+        summary = data['behavior']['summary']
+        for key, values in summary.items():
+            output_path = os.path.join(output_folder, f"{key}_results.txt")
+            with open(output_path, 'w') as f:
+                f.write('\n'.join(values))
+        
+        network = data['behavior']['network']
+        hosts_output_path = os.path.join(output_folder, "hosts_results.txt")
+        with open(hosts_output_path, 'w') as f:
+            f.write('\n'.join(network['hosts']))
+
+        domains_output_path = os.path.join(output_folder, "domains_results.txt")
+        with open(domains_output_path, 'w') as f:
+            for entry in network['domains']:
+                f.write('\n'.join(f"{entry['domain']};{entry['ip']}"))
+
+    except Exception as e:
+        print(f"Error: {e}")
+
 def phase2(file_path, output_folder):
     print("Starting dynamic analysis (phase2) ...")
     print("======================================")
@@ -240,17 +261,7 @@ def phase2(file_path, output_folder):
 
     output_folder = f"{output_folder}/dynamic"
     os.makedirs(output_folder, exist_ok=True)
-
-    try:
-        behavior = data['behavior']
-        # print("Behavior object extracted successfully.")
-        if output_folder:
-            output_path = os.path.join(output_folder, "behavior_results.txt")
-            with open(output_path, 'w') as f:
-                json.dump(behavior, f)
-    except Exception as e:
-        print(f"Error: {e}")
-        return []
+    extract_results(data, output_folder)
     
     if os.path.exists(dump_path):
         print("Memory dump received.")
