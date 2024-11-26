@@ -290,7 +290,7 @@ def apply_filters(plugin_name, output):
         "windows.dlllist": r"(AppData|Temp|random\.dll)",
         "windows.handles": r"(Temp|RunOnce|Run|Registry|HKEY|startup|NamedPipe|CurrentVersion|Security Center|Winlogon)",
         "windows.filescan": r"(\.exe|\.dll|\.tmp|\.scr|\.sys|\.bat|\.ps1|\.js|\.hta)",
-        "windows.vadinfo": r"(EXECUTABLE)"
+        "windows.vadinfo": r"(EXECUTE)"
     }
     pattern = patterns.get(plugin_name)
     if not pattern:
