@@ -477,10 +477,8 @@ def generate_report(args):
 
         with open(f"{static_dir}/yara_result.txt", "r") as yara_file:
             yara_lines = [line.strip() for line in yara_file if line.strip()]
-            if yara_lines:
-                data["YARA"] = yara_lines[0] 
-                for line in yara_lines[1:]:
-                    data[""] = line 
+            for idx, line in enumerate(yara_lines, start=1):
+                data[f"YARA_{idx}"] = line
 
         table = PrettyTable()
         table.field_names = ["Attribute", "Value"]
