@@ -482,8 +482,7 @@ def generate_report(args): #static_dir=".", dynamic_dir=".", memory_dir="."):
         table.align = "l"
         for key, value in data.items():
             table.add_row([key, value])
-        text = f"###Phase 1: Static Analysis ###\n\n{table}\n\nMore files are available at {static_dir}."
-        return text
+        return f"\n#### Phase 1: Static Analysis ####\n\n{table}\n"
 
     # Dynamic Analysis
     def dynamic_analysis():
@@ -498,7 +497,7 @@ def generate_report(args): #static_dir=".", dynamic_dir=".", memory_dir="."):
 
         sections.sort(key=lambda x: x[0])
 
-        result = ["###Phase 2: Dynamic Analysis ###\n"]
+        result = ["\n#### Phase 2: Dynamic Analysis ####\n"]
         for header, file_path in sections:
             separator = "=" * len(header)
             with open(file_path, "r") as f:
@@ -515,17 +514,12 @@ def generate_report(args): #static_dir=".", dynamic_dir=".", memory_dir="."):
                 result.append("")
         return "\n".join(result)
 
-    # Memory Forensics
     def memory_forensics():
-        try:
-            result = subprocess.run(["tree", memory_dir], text=True, capture_output=True, check=True)
-            return f"### Memory Forensics ###\n{result.stdout}\n"
-        except FileNotFoundError:
-            return "### Memory Forensics ###\nThe 'tree' command is not available. Please install it and try again.\n"
-        except subprocess.CalledProcessError as e:
-            return f"### Memory Forensics ###\nAn error occurred while running 'tree': {e}\n"
+        result = subprocess.run(f"tree -h {memory_dir}", shell=True, text=True, capture_output=True, check=True)
+        return f"\n#### Phase 3: Memory Forensics ####\n\n{result.stdout}\n"
 
     # Generate the complete report
+    report.append(f"\nThis is a summary report. For the full list of indicators, please check output folder: {args.output_folder}\n")
     report.append(static_analysis())
     report.append(dynamic_analysis())
     report.append(memory_forensics())
