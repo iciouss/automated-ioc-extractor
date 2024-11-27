@@ -475,6 +475,13 @@ def generate_report(args):
 
         data["AVClass"] = open(f"{static_dir}/avclass_result.txt").readline().split("\t")[1].strip()
 
+        with open(f"{static_dir}/yara_result.txt", "r") as yara_file:
+            yara_lines = [line.strip() for line in yara_file if line.strip()]
+            if yara_lines:
+                data["YARA"] = yara_lines[0] 
+                for line in yara_lines[1:]:
+                    data[""] = line 
+
         table = PrettyTable()
         table.field_names = ["Attribute", "Value"]
         table.align = "l"
@@ -516,7 +523,7 @@ def generate_report(args):
         return f"\n#### Phase 3: Memory Forensics ####\n\n{result.stdout}\n"
 
     # Generate the complete report
-    report.append(f"\nThis is a summary report. For the full list of indicators, please check output folder: {args.output_folder}\n")
+    report.append(f"\nThis is a summary report. For the full list of indicators, please check output folder: {args.output_folder}")
     report.append(static_analysis())
     report.append(dynamic_analysis())
     report.append(memory_forensics())
