@@ -439,12 +439,12 @@ def phase3(memdump_path, args, output_folder):
 
 
 
-def generate_report(args): #static_dir=".", dynamic_dir=".", memory_dir="."):
+def generate_report(args):
     report = []
     static_dir = os.path.join(f"{args.output_folder}","static")
     dynamic_dir = os.path.join(f"{args.output_folder}","dynamic")
     memory_dir = os.path.join(f"{args.output_folder}","memory")
-    # Static Analysis
+
     def static_analysis():
         data = {}
 
@@ -457,7 +457,6 @@ def generate_report(args): #static_dir=".", dynamic_dir=".", memory_dir="."):
                     if key not in exclude_keys:
                         data[key] = value
 
-        # Parse files
         process_key_value_file(f"{static_dir}/exiftool_result.txt", exclude_keys=["ExifTool Version Number"])
         data["MD5 Hash"] = open(f"{static_dir}/md5sum_result.txt").readline().split()[0]
         data["SHA256 Hash"] = open(f"{static_dir}/sha256sum_result.txt").readline().split()[0]
@@ -476,7 +475,6 @@ def generate_report(args): #static_dir=".", dynamic_dir=".", memory_dir="."):
 
         data["AVClass"] = open(f"{static_dir}/avclass_result.txt").readline().split("\t")[1].strip()
 
-        # Pretty Table for Static Analysis
         table = PrettyTable()
         table.field_names = ["Attribute", "Value"]
         table.align = "l"
@@ -484,7 +482,6 @@ def generate_report(args): #static_dir=".", dynamic_dir=".", memory_dir="."):
             table.add_row([key, value])
         return f"\n#### Phase 1: Static Analysis ####\n\n{table}\n"
 
-    # Dynamic Analysis
     def dynamic_analysis():
         files = [f for f in os.listdir(dynamic_dir) if os.path.isfile(os.path.join(dynamic_dir, f)) and f.endswith("_results.txt")]
 
@@ -524,7 +521,6 @@ def generate_report(args): #static_dir=".", dynamic_dir=".", memory_dir="."):
     report.append(dynamic_analysis())
     report.append(memory_forensics())
 
-    # Print the report
     print("\n".join(report))
     
     report_file = os.path.join(args.output_folder,"summary_report.txt")
