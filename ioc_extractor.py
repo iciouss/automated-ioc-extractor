@@ -547,7 +547,7 @@ def main():
     parser.add_argument("--phase3", action='store_true', help="Run Phase 3: Memory Forensics")
     parser.add_argument("--vt-api-key", help="API Key for VirusTotal")
     parser.add_argument("--memdump", help="Path to the memory dump file for Phase 3")
-    parser.add_argument("--report", help="Generate report from existing path")
+    parser.add_argument("--report", action='store_true', help="Generate report from existing path")
     args = parser.parse_args()
     
     file_path = args.file
