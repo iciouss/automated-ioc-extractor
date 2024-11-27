@@ -11,6 +11,7 @@ import configparser
 import time
 from http.server import BaseHTTPRequestHandler, HTTPServer
 import threading
+from prettytable import PrettyTable
 
 config = configparser.ConfigParser()
 config.optionxform = str
@@ -436,8 +437,106 @@ def phase3(memdump_path, args, output_folder):
     print(f"Memory forensics analysis completed. Results are available in {output_folder}")
     print("=====================================")
 
-def generate_report():
-    pass
+
+
+def generate_report(args): #static_dir=".", dynamic_dir=".", memory_dir="."):
+    report = []
+    static_dir = os.path.join(f"{args.output_folder}","static")
+    dynamic_dir = os.path.join(f"{args.output_folder}","dynamic")
+    memory_dir = os.path.join(f"{args.output_folder}","memory")
+    # Static Analysis
+    def static_analysis():
+        data = {}
+
+        # Helper to process key-value files
+        def process_key_value_file(file_path, exclude_keys=None):
+            exclude_keys = exclude_keys or []
+            with open(file_path, "r") as f:
+                for line in f:
+                    key, value = map(str.strip, line.split(":", 1))
+                    if key not in exclude_keys:
+                        data[key] = value
+
+        # Parse files
+        process_key_value_file(f"{static_dir}/exiftool_result.txt", exclude_keys=["ExifTool Version Number"])
+        data["MD5 Hash"] = open(f"{static_dir}/md5sum_result.txt").readline().split()[0]
+        data["SHA256 Hash"] = open(f"{static_dir}/sha256sum_result.txt").readline().split()[0]
+
+        with open(f"{static_dir}/ssdeep_result.txt") as f:
+            lines = f.readlines()
+            if len(lines) > 1:
+                data["SSDEEP Hash"] = lines[1].split(",")[0]
+
+        data["ImpHash"] = open(f"{static_dir}/imphash_result.txt").readline().strip()
+
+        with open(f"{static_dir}/diec_result.txt", "r") as f:
+            diec_data = json.load(f)
+            data["PE Status"] = diec_data["status"]
+            data["Entropy"] = round(diec_data["total"], 2)
+
+        data["AVClass"] = open(f"{static_dir}/avclass_result.txt").readline().split("\t")[1].strip()
+
+        # Pretty Table for Static Analysis
+        table = PrettyTable()
+        table.field_names = ["Attribute", "Value"]
+        table.align = "l"
+        for key, value in data.items():
+            table.add_row([key, value])
+        text = f"###Phase 1: Static Analysis ###\n\n{table}\n\nMore files are available at {static_dir}."
+        return text
+
+    # Dynamic Analysis
+    def dynamic_analysis():
+        files = [f for f in os.listdir(dynamic_dir) if os.path.isfile(os.path.join(dynamic_dir, f)) and f.endswith("_results.txt")]
+
+        sections = []
+        for file_name in files:
+            base_name = file_name.replace("_results.txt", "").replace("_", " ").title()
+            words = base_name.split(" ")
+            flipped_header = " ".join(words[::-1])
+            sections.append((flipped_header, os.path.join(dynamic_dir, file_name)))
+
+        sections.sort(key=lambda x: x[0])
+
+        result = ["###Phase 2: Dynamic Analysis ###\n"]
+        for header, file_path in sections:
+            separator = "=" * len(header)
+            with open(file_path, "r") as f:
+                lines = [line.strip() for line in f if line.strip()]
+                count = len(lines)
+                first_three = lines[:3]
+                result.append(f"{header}\n{separator}\n- Total Indicators: {count}")
+                if count > 0:
+                    result.append("- Examples:")
+                    for idx, line in enumerate(first_three, 1):
+                        result.append(f"  {idx}. {line}")
+                else:
+                    result.append("- No indicators found.")
+                result.append("")
+        return "\n".join(result)
+
+    # Memory Forensics
+    def memory_forensics():
+        try:
+            result = subprocess.run(["tree", memory_dir], text=True, capture_output=True, check=True)
+            return f"### Memory Forensics ###\n{result.stdout}\n"
+        except FileNotFoundError:
+            return "### Memory Forensics ###\nThe 'tree' command is not available. Please install it and try again.\n"
+        except subprocess.CalledProcessError as e:
+            return f"### Memory Forensics ###\nAn error occurred while running 'tree': {e}\n"
+
+    # Generate the complete report
+    report.append(static_analysis())
+    report.append(dynamic_analysis())
+    report.append(memory_forensics())
+
+    # Print the report
+    print("\n".join(report))
+    
+    report_file = os.path.join(args.output_folder,"summary_report.txt")
+    with open(report_file, "w") as f:
+        f.writelines(report)
+
 
 def main():
     parser = argparse.ArgumentParser(description="Automated Malware Analysis")
@@ -448,6 +547,7 @@ def main():
     parser.add_argument("--phase3", action='store_true', help="Run Phase 3: Memory Forensics")
     parser.add_argument("--vt-api-key", help="API Key for VirusTotal")
     parser.add_argument("--memdump", help="Path to the memory dump file for Phase 3")
+    parser.add_argument("--report", help="Generate report from existing path")
     args = parser.parse_args()
     
     file_path = args.file
@@ -478,7 +578,12 @@ def main():
                 sys.exit(1)
             phase3(args.memdump, args, output_folder)
     
-    generate_report()
+    if args.phase1 and args.phase2 and args.phase3:
+        generate_report(args)
+    elif args.report:
+        if not args.output_folder:
+            print("Output folder required for generating report.")
+        generate_report(args)
 
 if __name__ == "__main__":
     main()
