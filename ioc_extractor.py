@@ -547,7 +547,7 @@ def main():
     parser.add_argument("--phase3", action='store_true', help="Run Phase 3: Memory Forensics")
     parser.add_argument("--vt-api-key", help="API Key for VirusTotal")
     parser.add_argument("--memdump", help="Path to the memory dump file for Phase 3")
-    parser.add_argument("--report", action='store_true', help="Generate report from existing path")
+    parser.add_argument("--report", action='store_true', help="Only generate report from existing path")
     args = parser.parse_args()
     
     file_path = args.file
@@ -557,7 +557,9 @@ def main():
     # If no phases are specified, run all phases
     if not (args.phase1 or args.phase2 or args.phase3):
         args.phase1 = args.phase2 = args.phase3 = True
-
+    # If report is specified, disable all phases
+    if args.report:
+        args.phase1 = args.phase2 = args.phase3 = False
 
     if args.phase1:
         phase1(file_path, args, output_folder)
