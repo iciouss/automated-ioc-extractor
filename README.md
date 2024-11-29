@@ -25,10 +25,12 @@ Create 2 VMs, one with Ubuntu 24.04 (CAPE) and another with Windows 10
 (cuckoo1). Ubuntu VM should have both interfaces attached, while Windows VM just
 need vmbrY.
 
+#### Step 3
+
 Place both the scripts from [proxmox
-folder](https://github.com/iciouss/automated-ioc-extractor-archive/tree/main/proxmox)
+folder](https://github.com/iciouss/automated-ioc-extractor/tree/main/proxmox)
 in /var/vz/lib/snippets/ and configure
-[hookscript.sh](https://github.com/iciouss/automated-ioc-extractor-archive/blob/main/proxmox/hookscript.sh)
+[hookscript.sh](https://github.com/iciouss/automated-ioc-extractor/blob/main/proxmox/hookscript.sh)
 to run when Windows VM starts. Do it with command:
 
 `qm set <vmid> ---hookscript local:snippets/hookscript.sh`
@@ -75,7 +77,7 @@ Restart the services and ensure everything is running.
 #### Step 3
 
 Run
-[setup.sh](https://github.com/iciouss/automated-ioc-extractor-archive/blob/main/setup.sh)
+[setup.sh](https://github.com/iciouss/automated-ioc-extractor/blob/main/setup.sh)
 script to prepare the full environment for the pipeline.
 
 ## Windows 10
